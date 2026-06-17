@@ -263,15 +263,36 @@ def render_verdict_banner(verdict: str, explanation: str) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Sidebar — API keys
+# Sidebar — API keys & Conditional Secrets Logic
 # ---------------------------------------------------------------------------
 
 with st.sidebar:
     st.markdown("## 🔑 API Configuration")
     
-    # These fields will now remain empty, keeping your keys hidden
-    gemini_key_input = st.text_input("Google Gemini API Key", type="password")
-    tavily_key_input = st.text_input("Tavily API Key", type="password")
+    # 1. Attempt to fetch keys from Streamlit Secrets
+    gemini_secret = st.secrets.get("GEMINI_API_KEY", None)
+    tavily_secret = st.secrets.get("TAVILY_API_KEY", None)
+
+    # 2. If secrets exist, use them silently. Otherwise, show input boxes.
+    if gemini_secret and tavily_secret:
+        st.success("API Keys configured securely via cloud secrets.")
+        gemini_key = gemini_secret
+        tavily_key = tavily_secret
+    else:
+        st.caption("Keys are used only in this session and never stored.")
+        gemini_key = st.text_input(
+            "Google Gemini API Key",
+            type="password",
+            placeholder="AIza...",
+            help="Get your key at https://aistudio.google.com/apikey",
+        )
+        tavily_key = st.text_input(
+            "Tavily API Key",
+            type="password",
+            placeholder="tvly-...",
+            help="Get your key at https://tavily.com",
+        )
+
     st.divider()
     st.markdown("### How it works")
     st.markdown(
@@ -282,7 +303,6 @@ with st.sidebar:
         4. **Verify** against current web data
         """
     )
-
 # ---------------------------------------------------------------------------
 # Main UI
 # ---------------------------------------------------------------------------
