@@ -21,7 +21,6 @@ TAVILY_TOP_K = 3
 # Pydantic schemas
 # ---------------------------------------------------------------------------
 
-
 class ExtractedClaim(BaseModel):
     original_quote: str = Field(description="Exact quote from the document.")
     search_optimized_summary: str = Field(
@@ -160,7 +159,6 @@ st.markdown(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
 
 def get_gemini_client(api_key: str) -> genai.Client:
     return genai.Client(api_key=api_key)
@@ -303,6 +301,7 @@ with st.sidebar:
         4. **Verify** against current web data
         """
     )
+
 # ---------------------------------------------------------------------------
 # Main UI
 # ---------------------------------------------------------------------------
@@ -332,7 +331,6 @@ uploaded_pdf = st.file_uploader(
 # FAILSAFE: Ensure this variable always exists so Python never throws a NameError
 run_analysis = False
 
-# Make absolutely sure this block is NOT indented! It should be all the way to the left margin.
 run_analysis = st.button(
     "🔍 Run Fact Check",
     type="primary",
@@ -435,12 +433,6 @@ if "tl_results" in st.session_state and st.session_state["tl_results"]:
 
             st.markdown(
                 f'<div class="tl-fact-box"><strong>Current Real Fact</strong><br/>'
-                f'{verification.current_real_fact}</div>',
-                unsafe_allow_html=True,
-            )
-
-            with st.expander("Live web sources used"):
-                st.text(live_context)
                 f'{verification.current_real_fact}</div>',
                 unsafe_allow_html=True,
             )
