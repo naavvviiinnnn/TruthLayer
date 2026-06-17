@@ -318,13 +318,7 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Check if keys are available in Secrets or Sidebar inputs
-gemini_secret = st.secrets.get("GEMINI_API_KEY")
-tavily_secret = st.secrets.get("TAVILY_API_KEY")
-
-# keys_ready is true if we have either a secret OR a sidebar input
-keys_ready = bool((gemini_secret or gemini_key_input) and (tavily_secret or tavily_key_input))
-
+keys_ready = bool(gemini_key and tavily_key)
 if not keys_ready:
     st.info("Enter your Gemini and Tavily API keys in the sidebar to begin.")
 
@@ -335,28 +329,47 @@ uploaded_pdf = st.file_uploader(
     help="PDFs are parsed to Markdown to preserve tables and structure.",
 )
 
-# ... (existing file uploader code) ...
+# FAILSAFE: Ensure this variable always exists so Python never throws a NameError
+run_analysis = False
 
-# 1. Define the button here so 'run_analysis' exists
-run_analysis = st.button("Run Fact Check", type="primary", disabled=not keys_ready)
+# Make absolutely sure this block is NOT indented! It should be all the way to the left margin.
+run_analysis = st.button(
+    "🔍 Run Fact Check",
+    type="primary",
+    disabled=not (keys_ready and uploaded_pdf),
+    use_container_width=True,
+)
 
-# 2. Now check the button state
-if run_analysis:
-    # 1. Prioritize secrets (Cloud), otherwise use the sidebar inputs
-    g_key = st.secrets.get("GEMINI_API_KEY") or gemini_key_input
-    t_key = st.secrets.get("TAVILY_API_KEY") or tavily_key_input
+if run_analysis and uploaded_pdf and gemini_key and tavily_key:
+    gemini_client = get_gemini_client(gemini_key)
+    tavily_client = TavilyClient(api_key=tavily_key)
 
-    # 2. Safety check
-    if not g_key or not t_key:
-        st.error("API Keys missing. Please ensure they are set in Streamlit Secrets or provided in the sidebar.")
-        st.stop()
+    with st.status("Analyzing document…", expanded=True) as status:
+        st.write("📄 Parsing PDF to Markdown…")
+        markdown_text = parse_pdf_to_markdown(uploaded_pdf)
+        st.write(f"Extracted **{len(markdown_text):,}** characters.")
 
-    # 3. Initialize clients
-    gemini_client = get_gemini_client(g_key)
-    tavily_client = TavilyClient(api_key=t_key)
-    
+        with st.expander("Preview extracted Markdown", expanded=False):
+            st.markdown(markdown_text[:6000] + ("…" if len(markdown_text) > 6000 else ""))
 
-    # ... [Keep the rest of your indentation and code here]
+        st.write("🧠 Extracting verifiable claims with Gemini…")
+        document_claims = extract_claims(gemini_client, markdown_text)
+
+        if not document_claims.claims:
+            status.update(label="No verifiable claims found", state="complete")
+            st.warning("No statistical, date, or financial claims were found in this document.")
+        else:
+            st.write(f"Found **{len(document_claims.claims)}** claim(s). Running live verification…")
+            results: list[tuple[ExtractedClaim, VerificationResult, str]] = []
+
+            for idx, claim in enumerate(document_claims.claims, 1):
+                st.write(f"🌐 [{idx}/{len(document_claims.claims)}] Searching: *{claim.search_optimized_summary}*")
+                live_context = build_live_context(tavily_client, claim.search_optimized_summary)
+                verification = verify_claim(gemini_client, claim, live_context)
+                results.append((claim, verification, live_context))
+
+            status.update(label="Analysis complete", state="complete")
+            st.session_state["tl_results"] = results
 
 if "tl_results" in st.session_state and st.session_state["tl_results"]:
     st.divider()
@@ -422,6 +435,12 @@ if "tl_results" in st.session_state and st.session_state["tl_results"]:
 
             st.markdown(
                 f'<div class="tl-fact-box"><strong>Current Real Fact</strong><br/>'
+                f'{verification.current_real_fact}</div>',
+                unsafe_allow_html=True,
+            )
+
+            with st.expander("Live web sources used"):
+                st.text(live_context)
                 f'{verification.current_real_fact}</div>',
                 unsafe_allow_html=True,
             )
