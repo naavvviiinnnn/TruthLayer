@@ -1,5 +1,6 @@
 streamlit
-pymupdf4llm
-pydantic
 google-genai
 tavily-python
+pymupdf
+pymupdf4llm
+pydantic
