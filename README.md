@@ -27,3 +27,20 @@ If you want to run this project on your local machine, follow these steps:
    ```bash
    git clone [https://github.com/naavvviiinnnn/TruthLayer.git](https://github.com/naavvviiinnnn/TruthLayer.git)
    cd TruthLayer
+2. Install the dependencies:
+
+ ```bash
+pip install -r requirements.txt
+
+3. Set up your API Keys securely:
+Create a hidden folder named .streamlit in the root of your project, and inside it, create a file named secrets.toml. Add your keys to this file:
+
+Ini, TOML
+GEMINI_API_KEY = "your_gemini_api_key_here"
+TAVILY_API_KEY = "your_tavily_api_key_here"
+(Note: Ensure .streamlit/ is included in your .gitignore file so you do not accidentally push your keys to GitHub).
+
+4. Run the application:
+
+ ```bash
+streamlit run app.py
